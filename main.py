@@ -1,7 +1,8 @@
 import telebot
 import pandas as pd
+from sec import sec
 
-token = '7453810145:AAE8AzJamsCbuwAdVAfIjeoE1SnEmhTJ4YY'
+token = sec.get('BOT_API_TOKEN')
 bot = telebot.TeleBot(token)
 
 homework_data = pd.read_excel('homework_data.xlsx', header=[0, 3])
@@ -32,7 +33,7 @@ def handle_message(message):
 
 def check_homework_completion(chat_id):
     if ('Кол-во пар', 'Проверено') not in homework_data.columns:
-        bot.send_message(chat_id, "Ошибка: Не найдены необходимые столбцы в данных о домашних заданиях.")
+        bot.send_message(chat_id, "столбцы 'Кол-во пар', 'Проверено' в файле не распознаны")
         return
 
     total_homework = homework_data[('Кол-во пар', 'Выдано')].sum()
@@ -46,10 +47,10 @@ def check_homework_completion(chat_id):
 
 def check_homework_given(chat_id):
     if ('Кол-во пар', 'Выдано') not in homework_data.columns:
-        bot.send_message(chat_id, "Ошибка: Не найдены необходимые столбцы в данных о домашних заданиях.")
+        bot.send_message(chat_id, "столбцы 'Кол-во пар', 'Выдано' в файле не распознаны")
         return
 
-    total_given_homework = homework_data[('Кол-во пар', 'Выдано')].sum()  # Суммируем все выданные ДЗ
+    total_given_homework = homework_data[('Кол-во пар', 'Выдано')].sum()
     given_rate = (total_given_homework / len(homework_data)) * 100 if len(homework_data) > 0 else 0
     if given_rate < 70:
         bot.send_message(chat_id,
