@@ -1,23 +1,21 @@
 import telebot
-import sqlite3
-import openpyxl
-import smtplib
 import pandas as pd
 
-token = ('7453810145:AAE8AzJamsCbuwAdVAfIjeoE1SnEmhTJ4YY')
+token = '7453810145:AAE8AzJamsCbuwAdVAfIjeoE1SnEmhTJ4YY'
 bot = telebot.TeleBot(token)
 
-data = pd.read_excel('homework_data.xlsx')
-data1 = pd.read_excel('attendance_data.xlsx')
+homework_data = pd.read_excel('homework_data.xlsx', header=[0, 3])
+attendance_data = pd.read_excel('attendance_data.xlsx')
 
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, "Добро пожаловать! Пожалуйста, представьтесь(ФИО)")
+    bot.send_message(message.chat.id, "Добро пожаловать! Пожалуйста, представьтесь (ФИО)")
 
 
 def is_teacher_valid(teacher_name):
-    return teacher_name in data, data1['ФИО преподавателя'].values
+    return teacher_name in homework_data['ФИО преподавателя'].values or teacher_name in attendance_data[
+        'ФИО преподавателя'].values
 
 
 @bot.message_handler(func=lambda message: True)
@@ -33,24 +31,29 @@ def handle_message(message):
 
 
 def check_homework_completion(chat_id):
-    total_homework = len(data)
-    checked_homework = data[data['Проверенные ДЗ'] == True].shape[0]
-
-    completion_rate = (checked_homework / total_homework) * 100
-    if completion_rate >= 75:
+    if ('Кол-во пар', 'Проверено') not in homework_data.columns:
+        bot.send_message(chat_id, "Ошибка: Не найдены необходимые столбцы в данных о домашних заданиях.")
         return
-    bot.send_message(chat_id,
-                     f"Внимание! Процент проверенных домашних заданий ниже 75% ({completion_rate:.2f}%).")
+
+    total_homework = homework_data[('Кол-во пар', 'Выдано')].sum()
+    checked_homework = homework_data[('Кол-во пар', 'Проверено')].sum()
+
+    completion_rate = (checked_homework / total_homework) * 100 if total_homework > 0 else 0
+    if completion_rate < 75:
+        bot.send_message(chat_id,
+                         f"Внимание! Процент проверенных домашних заданий ниже 75% ({completion_rate:.2f}%).")
 
 
 def check_homework_given(chat_id):
-    total_given_homework = len(data)
-    given_homework = data[data['Выдано ДЗ'] == True].shape[0]
-
-    given_rate = (given_homework / total_given_homework) * 100
-    if given_rate >= 70:
+    if ('Кол-во пар', 'Выдано') not in homework_data.columns:
+        bot.send_message(chat_id, "Ошибка: Не найдены необходимые столбцы в данных о домашних заданиях.")
         return
-    bot.send_message(chat_id, f"Внимание! Процент выданного домашнего задания ниже 70% ({given_rate:.2f}%).")
+
+    total_given_homework = homework_data[('Кол-во пар', 'Выдано')].sum()  # Суммируем все выданные ДЗ
+    given_rate = (total_given_homework / len(homework_data)) * 100 if len(homework_data) > 0 else 0
+    if given_rate < 70:
+        bot.send_message(chat_id,
+                         f"Внимание! Процент выданного домашнего задания ниже 70% ({given_rate:.2f}%).")
 
 
 bot.polling()
